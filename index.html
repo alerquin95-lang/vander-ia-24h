@@ -1,4 +1,25 @@
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VANDER STUDIO AI</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script src="https://cdn.tailwindcss.com"></script><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&family=Sora:wght@700;800&display=swap" rel="stylesheet"><style>
+<!DOCTYPE html><html lang="pt-BR"><head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VANDER STUDIO AI</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script src="https://cdn.tailwindcss.com"></script><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&family=Sora:wght@700;800&display=swap" rel="stylesheet"><style>
 #loginScreen{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;background:#05070d}
 .login-card{width:100%;max-width:380px;background:rgba(10,15,29,.95);border:1px solid rgba(139,92,246,.25);border-radius:24px;padding:38px 32px;text-align:center}
 .login-input{width:100%;padding:14px 16px;margin:7px 0;border-radius:12px;background:rgba(2,6,23,.65);border:1px solid rgba(255,255,255,.1);color:#fff;font-size:14px;outline:none;font-family:Inter,sans-serif}
@@ -81,7 +102,7 @@ let chartDist=null,chartHist=null,plateData=[],_loading=false;
 const COOLDOWN_MS=20000;
 const LS_STATS='vander_ia_stats_v3',LS_SIGS='vander_ia_sigs_v3',LS_ACT='vander_ia_active_v3',LS_FLASH='vander_ia_flash_v3',LS_LAST='vander_ia_last_v3',LS_KEY='vander_ia_key_v3',LS_J='vander_journal_v1';
 let iaStats={greens:0,reds:0,g0:0,g1:0,g2:0,tieGreens:0};
-let sigHistory=[],activeSignal=null,resolvedFlash=null,lastSignalAt=0,lastKey='',journal=[];
+let sigHistory=[],activeSignal=null,resolvedFlash=null,lastSignalAt=0,lastKey='',journal=[],robotActive=null;
 let lastRoundId=null,lastRoundSeenAt=0,lastRenderedId=null,firstRenderDone=false;
 try{const s=JSON.parse(localStorage.getItem(LS_STATS)||'null');if(s)iaStats=Object.assign(iaStats,s);
 const h=JSON.parse(localStorage.getItem(LS_SIGS)||'null');if(Array.isArray(h))sigHistory=h;
@@ -120,187 +141,4 @@ function galeAt_A(A,k,p){for(let g=0;g<=2;g++){if(k+g>=A.length)return-1;const w
 function galeAt_seq(s,i0,p){for(let g=0;g<=2;g++){const ix=i0-g;if(ix<0)return-1;const w=s[ix];if(w===p||w==='TIE')return g;}return-1;}
 function galeScore(h0,h1){return(h0*2+h1)/3;}
 function regimeLocal(s,st,w){const sl=s.slice(st,st+w).filter(function(x){return x==='HOME'||x==='AWAY';});if(sl.length<6)return null;let t=0;for(let i=0;i<sl.length-1;i++)if(sl[i]!==sl[i+1])t++;const al=t/(sl.length-1);if(al>=0.62)return'ALTERNADO';if(al<=0.38)return'ESTICADO';return'NEUTRO';}
-function detectarRegime(s){const sl=s.slice(0,20).filter(function(x){return x==='HOME'||x==='AWAY';});if(sl.length<8)return{modo:'INDEFINIDO',alt:0,streak:0,n:sl.length};let t=0;for(let i=0;i<sl.length-1;i++)if(sl[i]!==sl[i+1])t++;const al=t/(sl.length-1);let rn=[],c=1;for(let i=1;i<sl.length;i++){if(sl[i]===sl[i-1])c++;else{rn.push(c);c=1;}}rn.push(c);const md=rn.reduce(function(a,b){return a+b;},0)/rn.length;let mo='NEUTRO';if(al>=0.62)mo='ALTERNADO';else if(al<=0.38&&md>=2.2)mo='ESTICADO';return{modo:mo,alt:al,streak:md,n:sl.length};}
-const VRULES=[
-{kind:'V2UP',label:'2 acima',fire:function(W,k){if(k%6<2)return null;const a=W(k-1),b=W(k-2);return(a&&b&&a===b&&a!=='TIE')?a:null;}},
-{kind:'V3UP',label:'3 acima',fire:function(W,k){if(k%6<3)return null;const a=W(k-1);return(a&&a!=='TIE'&&W(k-2)===a&&W(k-3)===a)?a:null;}},
-{kind:'H2LEFT',label:'2 à esquerda',fire:function(W,k){if(Math.floor(k/6)<2)return null;const a=W(k-6),b=W(k-12);return(a&&b&&a===b&&a!=='TIE')?a:null;}},
-{kind:'DIAG',label:'diagonal',fire:function(W,k){if(k%6<1||Math.floor(k/6)<1)return null;const a=W(k-1),b=W(k-7);return(a&&b&&a===b&&a!=='TIE')?a:null;}},
-{kind:'ROWCHOP',label:'zigue na linha',fire:function(W,k){if(Math.floor(k/6)<4)return null;const a=W(k-6),b=W(k-12),d=W(k-18),e=W(k-24);if(!a||!b||!d||!e)return null;if(a==='TIE'||b==='TIE'||d==='TIE'||e==='TIE')return null;return(a!==b&&b!==d&&d!==e)?(a==='HOME'?'AWAY':'HOME'):null;}}];
-function btVisual(A,ds){const W=function(i){return(i>=0&&i<A.length)?A[i].w:null;};const o=[];for(const ru of VRULES){let n=0,w0=0,w1=0;for(let k=Math.max(18,ds);k<A.length-2;k++){const p=ru.fire(W,k);if(!p)continue;n++;const g=galeAt_A(A,k,p);if(g===0)w0++;if(g>=0&&g<=1)w1++;}if(n>=6){const cu=ru.fire(W,A.length);if(cu){const h0=w0/n,h1=w1/n;o.push({kind:ru.kind,label:ru.label,n:n,pred:cu,hit:h1,h0:h0,h1:h1,gale:galeScore(h0,h1),visual:true});}}}return o;}
-function btSeq(s,L,de){const cu=s.slice(0,L).join(',');const hh=[];const lim=Math.min(s.length-L,de);for(let i=L;i<lim;i++){if(s.slice(i,i+L).join(',')===cu)hh.push(i);}if(hh.length<4)return null;let h=0,a=0;for(const i of hh){const w=s[i-1];if(w==='HOME')h++;else if(w==='AWAY')a++;}const pr=h>=a?'HOME':'AWAY';let n=0,w0=0,w1=0;for(const i of hh){if(i-3<0)continue;n++;const g=galeAt_seq(s,i-1,pr);if(g===0)w0++;if(g>=0&&g<=1)w1++;}if(n<4)return null;const h0=w0/n,h1=w1/n;return{kind:'SEQ'+L,label:'padrão '+L+'x',n:n,pred:pr,hit:h1,h0:h0,h1:h1,gale:galeScore(h0,h1)};}
-function btStreak(s,de){const t=s[0];let L=0;for(const w of s){if(w===t)L++;else break;}if(L<3||(t!=='HOME'&&t!=='AWAY'))return null;let n=0,w0=0,w1=0;const lim=Math.min(s.length-L,de);for(let i=1;i<lim;i++){let ok=true;for(let k=0;k<L;k++){if(s[i+k]!==t){ok=false;break;}}if(!ok)continue;if(i-3<0)continue;n++;const g=galeAt_seq(s,i-1,t);if(g===0)w0++;if(g>=0&&g<=1)w1++;}if(n<4)return null;const h0=w0/n,h1=w1/n;return{kind:'STREAK',label:'streak x'+L,n:n,pred:t,hit:h1,h0:h0,h1:h1,gale:galeScore(h0,h1)};}
-function btRegime(s,de){const lim=Math.min(s.length-1,de);let n=0,w0=0,w1=0;for(let i=12;i<lim;i++){const mo=regimeLocal(s,i,12);if(!mo||mo==='NEUTRO')continue;const la=s[i];if(la!=='HOME'&&la!=='AWAY')continue;if(i-3<0)continue;const pr=mo==='ALTERNADO'?(la==='HOME'?'AWAY':'HOME'):la;n++;const g=galeAt_seq(s,i-1,pr);if(g===0)w0++;if(g>=0&&g<=1)w1++;}const ma=regimeLocal(s,0,12);if(!ma||ma==='NEUTRO')return null;const l0=s[0];if(l0!=='HOME'&&l0!=='AWAY')return null;const pa=ma==='ALTERNADO'?(l0==='HOME'?'AWAY':'HOME'):l0;if(n<6)return null;const h0=w0/n,h1=w1/n;return{kind:'REGIME',label:ma==='ALTERNADO'?'segue o zigue':'segue a esticada',n:n,pred:pa,hit:h1,h0:h0,h1:h1,gale:galeScore(h0,h1),modo:ma};}
-function pickPattern(h){const seq=h.map(function(x){return x.winner;});const bo=deckBounds(h);const de=bo.length?bo[0]+1:h.length;const A=h.slice().reverse().map(function(x){return{w:x.winner,time:x.time||'',id:x.round_id};});const ds=A.length-de;const cd=btVisual(A,ds);for(const L of[2,3,4,5]){const r=btSeq(seq,L,de);if(r)cd.push(r);}const st=btStreak(seq,de);if(st)cd.push(st);const rg=btRegime(seq,de);if(rg)cd.push(rg);cd.forEach(function(x){x.adj=(x.gale||x.hit)-0.9/Math.sqrt(x.n);});cd.sort(function(a,b){return b.adj-a.adj;});return{best:cd[0]||null,cands:cd.slice(0,6),regime:detectarRegime(seq),A:A,deckEnd:de,deckRounds:de,deckChanged:bo.length>0&&bo[0]===0,deckCount:bo.length+1};}
-function findConsensus(cd){const v=cd.filter(function(x){return x.n>=6&&(x.pred==='HOME'||x.pred==='AWAY');});const bc={};v.forEach(function(x){(bc[x.pred]=bc[x.pred]||[]).push(x);});let be=null;for(const co in bc){const ar=bc[co];if(ar.length>=2){const tn=ar.reduce(function(s,x){return s+x.n;},0);if(!be||tn>be.totalN)be={pred:co,count:ar.length,totalN:tn,labels:ar.map(function(x){return x.label;})};}}return be;}
-function avaliarChance(o){const mo=[];let sc=0,pr=null;
-if(o.consensus){pr=o.consensus.pred;sc+=3;mo.push(o.consensus.count+' análises apontam '+pr);if(o.consensus.totalN>=30){sc+=2;mo.push('muito testado');}else if(o.consensus.totalN>=15){sc+=1;mo.push('bem testado');}}
-else if(o.best&&(o.best.pred==='HOME'||o.best.pred==='AWAY')){pr=o.best.pred;if(o.best.n>=12){sc+=2;mo.push('padrão '+o.best.label+' bem testado');}else{sc+=1;mo.push('padrão isolado ('+o.best.label+')');}}
-if(!pr)return{boa:false};
-if(o.surf){if(o.surf.side!==pr)return{boa:false,bloqueado:true};sc+=2;mo.push('a favor do surf ('+o.surf.len+'x)');}
-if(o.pull&&o.pull.pulls&&o.pull.pulls[0].side===pr&&o.pull.pulls[0].gap>0.02){sc+=1;mo.push('lado puxando nos 400');}
-if(o.minSide&&o.minSide===pr){sc+=1;mo.push('minuto puxa '+pr);}
-if(o.regime&&o.regime.modo!=='NEUTRO'&&o.regime.modo!=='INDEFINIDO'&&o.lastRes){const ea=pr!==o.lastRes;if(o.regime.modo==='ALTERNADO'&&ea){sc+=2;mo.push('mesa alternando — segue o zigue');}else if(o.regime.modo==='ESTICADO'&&!ea){sc+=2;mo.push('mesa esticada — segue a sequência');}}
-const gc=(o.cands||[]).filter(function(x){return x.pred===pr&&(x.gale||0)>0;});
-if(gc.length){const ag=gc.reduce(function(s,x){return s+x.gale;},0)/gc.length;if(ag>=0.60){sc+=2;mo.push('padrões resolvem no G0/G1');}else if(ag>=0.50){sc+=1;mo.push('padrões bons até o G1');}}
-if(o.deckRounds<8)sc-=2;
-const ct=(o.cands||[]).filter(function(x){return(x.pred==='HOME'||x.pred==='AWAY')&&x.pred!==pr&&x.n>=6;});
-if(ct.length>=2)sc-=1;
-return{boa:sc>=4,pred:pr,score:sc,motivos:mo};}
-function analyzeAI(h){
-if(h.length<10)return{ready:false,msg:'Aguardando dados ('+h.length+'/10)'};
-const pk=pickPattern(h),best=pk.best,A=pk.A,cd=pk.cands,cs=findConsensus(cd),seq=h.map(function(x){return x.winner;});
-const co=function(a){const r={HOME:0,AWAY:0,TIE:0};a.forEach(function(x){if(r[x]!==undefined)r[x]++;});return r;};
-const c10=co(seq.slice(0,10)),c20=co(seq.slice(0,20)),c50=co(seq.slice(0,50));
-let st=seq[0],sl=0;for(const w of seq){if(w===st)sl++;else break;}
-let surf=null;if((st==='HOME'||st==='AWAY')&&sl>=4)surf={side:st,len:sl};
-const pa={};for(let i=0;i<seq.length-1;i++){const k=seq[i]+' > '+seq[i+1];pa[k]=(pa[k]||0)+1;}
-const tp=Object.entries(pa).sort(function(a,b){return b[1]-a[1];}).slice(0,4);
-let mT='',mS=null;const mH=[];const mM=minuteMap(h),nM=new Date().getMinutes(),me=mM[nM];
-if(me&&me.n>=6){const pH=me.HOME/me.n,pA=me.AWAY/me.n;mS=pH>=pA?'HOME':'AWAY';const p=Math.max(pH,pA);if(p>=0.58)mT=':'+String(nM).padStart(2,'0')+' puxa '+mS+' '+Math.round(p*100)+'%';}
-Object.entries(mM).forEach(function(x){const v=x[1];if(v.n>=6){const pH=v.HOME/v.n,pA=v.AWAY/v.n,p=Math.max(pH,pA);if(p>=0.58)mH.push({min:+x[0],n:v.n,side:pH>=pA?'HOME':'AWAY',p:p});}});
-mH.sort(function(a,b){return b.p-a.p;});if(mH.length>4)mH.length=4;
-const ti=tieIntel(A,A.length-pk.deckEnd);
-const fc=btVisual(A,0);fc.forEach(function(x){x.adj=(x.gale||x.hit)-0.9/Math.sqrt(x.n);});fc.sort(function(a,b){return b.adj-a.adj;});
-const pu=fullPull(h),rg=pk.regime,lr=(seq[0]==='HOME'||seq[0]==='AWAY')?seq[0]:null;
-const ch=avaliarChance({cands:cd,consensus:cs,best:best,surf:surf,pull:pu,minSide:mS,deckRounds:pk.deckRounds,regime:rg,lastRes:lr});
-let sg='OBSERVANDO',et=null;
-if(ch.boa){sg='CHANCE BOA';et={pred:ch.pred,motivos:ch.motivos,label:'Chance boa: '+ch.pred};}
-return{ready:true,signal:sg,entry:et,chance:ch,consensus:cs,regime:rg,surf:surf,c10:c10,c20:c20,c50:c50,topPairs:tp,best:best,cands:cd,deckRounds:pk.deckRounds,deckChanged:pk.deckChanged,deckCount:pk.deckCount,minTxt:mT,minSide:mS,minHot:mH,tieTop:ti.top,tieAvg:ti.avgGap,tieSince:ti.sinceTie,fullBest:fc[0]||null,pull:pu};}
-function processSignals(h){const now=Date.now();if(!activeSignal)return;
-if(now-activeSignal.id>1200000){sigHistory.unshift(Object.assign({},activeSignal,{status:'EXPIRED',result:'—',galesUsed:activeSignal.gales,endedAt:now}));sigHistory=sigHistory.slice(0,12);activeSignal=null;persistIA();return;}
-const ix=h.findIndex(function(x){return String(x.round_id)===String(activeSignal.afterRoundId);});if(ix<=0)return;
-const nw=h.slice(0,ix);const rs=nw.find(function(x){return x.winner==='HOME'||x.winner==='AWAY'||x.winner==='TIE';});if(!rs)return;
-const w=rs.winner;
-if(w===activeSignal.entry||w==='TIE'){const g=activeSignal.gales;iaStats.greens++;if(g===0)iaStats.g0++;else if(g===1)iaStats.g1++;else iaStats.g2++;if(w==='TIE')iaStats.tieGreens=(iaStats.tieGreens||0)+1;sigHistory.unshift(Object.assign({},activeSignal,{status:'GREEN',result:w,galesUsed:g,endedAt:now}));sigHistory=sigHistory.slice(0,12);resolvedFlash={signal:sigHistory[0],at:now};activeSignal=null;persistIA();}
-else if(activeSignal.gales<2){activeSignal.gales++;activeSignal.afterRoundId=rs.round_id;persistIA();}
-else{iaStats.reds++;sigHistory.unshift(Object.assign({},activeSignal,{status:'RED',result:w,galesUsed:2,endedAt:now}));sigHistory=sigHistory.slice(0,12);resolvedFlash={signal:sigHistory[0],at:now};activeSignal=null;persistIA();}}
-function maybeCreateSignal(ai,h){if(activeSignal)return;if(resolvedFlash&&Date.now()-resolvedFlash.at<=12000)return;if(!ai.ready||!h.length)return;
-try{const a=JSON.parse(localStorage.getItem(LS_ACT)||'null');if(a&&a.id){activeSignal=a;return;}const t=JSON.parse(localStorage.getItem(LS_LAST)||'null');if(t)lastSignalAt=Math.max(lastSignalAt,t);const k=localStorage.getItem(LS_KEY)||'';if(k)lastKey=k;}catch(e){}
-const et=ai.entry;if(!et)return;if(ai.surf&&et.pred!==ai.surf.side)return;if(!betWindow().open)return;if(Date.now()-lastSignalAt<COOLDOWN_MS)return;
-const key='chance:'+et.pred;if(key===lastKey)return;
-activeSignal={id:Date.now(),entry:et.pred,time:new Date().toLocaleTimeString('pt-BR'),afterRoundId:h[0].round_id,gales:0,label:et.label,motivos:et.motivos};
-lastSignalAt=Date.now();lastKey=key;persistIA();}
-function noteJournal(o){const n=Date.now();if(journal.find(function(j){return j.minute===o.minute&&n-j.at<3600000;}))return;journal.unshift({at:n,minute:o.minute,side:o.side,pct:o.pct,n:o.n});journal=journal.slice(0,40);try{localStorage.setItem(LS_J,JSON.stringify(journal));}catch(e){}}
-function renderJournal(){const el=document.getElementById('journalBox');if(!el)return;el.innerHTML=journal.length?journal.map(function(j){const d=new Date(j.at),co=j.side==='HOME'?RED:BLUE;return'<div class="hot-row"><span style="color:#94a3b8">'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'</span><span>min <b>:'+String(j.minute).padStart(2,'0')+'</b> puxou <b style="color:'+co+'">'+j.side+'</b> '+j.pct+'% <span class="muted">('+j.n+')</span></span></div>';}).join(''):'<div class="muted">Nenhum horário anotado ainda</div>';}
-function showSearching(ms,ai){const bx=document.getElementById('aiBox');
-const sb=(ai&&ai.surf)?'<div style="margin-top:12px"><span style="display:inline-flex;align-items:center;gap:8px;background:rgba(15,102,255,.12);border:1px solid rgba(15,102,255,.45);color:#5b9dff;padding:8px 16px;border-radius:999px;font-weight:800;font-size:11px"><span class="pulse-dot blue"></span>SURF DE '+ai.surf.side+' ('+ai.surf.len+'x)</span></div>':'';
-let cd='<span class="pattern-tag">varrendo resultados…</span>';
-if(ai&&ai.ready&&ai.cands&&ai.cands.length){cd=ai.cands.map(function(x){const gb=(x.gale||0)>=0.60?' <b style="color:#10b981">G0/G1</b>':'';return'<span class="pattern-tag rise">'+x.label+' <span class="muted">('+x.n+'x)</span> → '+x.pred+gb+'</span>';}).join('');}
-let mh='';
-if(ai&&ai.ready&&ai.chance&&ai.chance.boa){mh='<div style="margin-top:14px"><div class="label" style="margin-bottom:8px;color:#10b981">Por que a chance tá boa</div><div>'+ai.chance.motivos.map(function(m){return'<span class="motivo-tag">✓ '+m+'</span>';}).join('')+'</div></div>';}
-else if(ai&&ai.ready&&ai.consensus){mh='<div style="margin-top:12px"><span class="pattern-tag" style="border-color:#10b981;color:#10b981">'+ai.consensus.count+' análises → '+ai.consensus.pred+'</span> <span class="muted">— chance ainda não tá boa</span></div>';}
-const bw=betWindow(),wc=bw.open?'#10b981':'#ffc400',wd=bw.open?'green':'amber',wt=bw.open?('JANELA DE APOSTA · '+Math.ceil(bw.leftMs/1000)+'s'):'JANELA DE 10s FECHADA';
-bx.innerHTML='<div class="ia-searching"><div class="spinner"></div><div style="font-size:18px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#8b5cf6,#0f66ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">IA LENDO O PLACAR<span class="ia-dots"><span>.</span><span>.</span><span>.</span></span></div><div class="muted" style="margin-top:10px">'+(ms||'Escaneando...')+'</div>'+sb+mh+'<div id="windowLine" style="margin-top:14px;font-size:11px;font-weight:800;color:'+wc+'"><span class="pulse-dot '+wd+'"></span> '+wt+'</div><div style="margin-top:10px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap">'+cd+'</div></div>';}
-function renderAI(ai){const bx=document.getElementById('aiBox');
-if(resolvedFlash&&Date.now()-resolvedFlash.at<=12000){const s=resolvedFlash.signal,wn=s.status==='GREEN',co=s.entry==='HOME'?RED:BLUE;
-bx.innerHTML='<div class="'+(wn?'acerto-box':'loss-box')+'"><div class="'+(wn?'check-ring':'check-ring loss')+'"><span>'+(wn?'✓':'✕')+'</span></div><div style="font-size:22px;font-weight:900;margin-top:14px;color:'+(wn?'#10b981':'#ff1a1a')+'">'+(wn?('ACERTOU! '+galeLabel(s.galesUsed)):'NÃO BATEU')+'</div><div class="muted" style="margin-top:8px">Entrada <b style="color:'+co+'">'+s.entry+'</b> · resultado <b style="color:#e5e7eb">'+s.result+'</b></div><div class="muted" style="margin-top:10px">Voltando a ler o placar…</div></div>';return;}
-if(activeSignal){const s=activeSignal,ih=s.entry==='HOME',chx=ih?RED:BLUE,gt=s.gales===0?'G0 — primeira tentativa':('G'+s.gales+' — ENTRE AGORA');
-const mt=(s.motivos||[]).map(function(m){return'<span class="motivo-tag">✓ '+m+'</span>';}).join('');
-bx.innerHTML='<div class="sig-active '+(ih?'home':'away')+'"><div style="display:flex;justify-content:space-between;align-items:center"><span class="ai-badge"><span class="pulse-dot violet" style="margin-right:6px"></span>CHANCE BOA · ENTRADA</span><span class="badge" style="background:'+chx+'20;color:'+chx+';border:1px solid '+chx+'50">'+gt+'</span></div><div style="font-size:42px;font-weight:800;margin:12px 0;font-family:Sora,sans-serif;display:flex;align-items:center;justify-content:center;gap:14px;color:'+chx+'"><span class="dot" style="background:'+chx+';width:20px;height:20px"></span>'+s.entry+'</div><div style="margin-top:6px">'+mt+'</div><div class="muted" style="margin-top:10px">'+(s.gales===0?'Aguardando resultado…':('Nova entrada G'+s.gales))+ ' · cobre empate</div><div style="margin-top:12px;display:flex;gap:8px;justify-content:center"><span class="gale-tag '+(s.gales>=0?'on':'')+'">G0</span><span class="gale-tag '+(s.gales>=1?'on':'')+'">G1</span><span class="gale-tag '+(s.gales>=2?'on':'')+'">G2</span></div></div>';return;}
-if(!ai.ready){showSearching(ai.msg);return;}
-const bw=betWindow(),et=ai.entry;
-if(et&&!bw.open)showSearching('Chance boa em '+et.pred+' — aguardando próxima rodada',ai);
-else if(et)showSearching('Chance boa: '+et.pred,ai);
-else showSearching('Lendo o placar — sem chance boa'+(ai.minTxt?' · '+ai.minTxt:''),ai);}
-function renderSigPanel(){const el=document.getElementById('sigStats');
-if(el){const tg=iaStats.tieGreens||0;el.innerHTML='<span style="color:#10b981">'+iaStats.greens+'W</span> <span style="color:#ffc400">'+tg+' emp</span> <span style="color:#ff1a1a">'+iaStats.reds+'L</span> <span style="color:#94a3b8">'+iaAssert()+'%</span> | <span style="color:#e5e7eb">G0:'+iaStats.g0+'</span> <span style="color:#ffc400">G1:'+iaStats.g1+'</span> <span style="color:#8b5cf6">G2:'+iaStats.g2+'</span>';}
-const li=document.getElementById('sigList');if(!li)return;let hh='';
-if(activeSignal){const s=activeSignal,co=s.entry==='HOME'?RED:BLUE;hh+='<div class="sig-row" style="border-left:4px solid '+co+'"><div><b style="color:'+co+'">ENTRA '+s.entry+'</b> <span class="muted">• '+s.time+' • cobre empate</span></div><span class="badge" style="background:#ffc4001f;color:#ffc400">G'+s.gales+'</span></div>';}
-if(sigHistory.length){hh+=sigHistory.map(function(s){const wn=s.status==='GREEN',co=s.entry==='HOME'?RED:BLUE,bc=wn?GREEN:(s.status==='EXPIRED'?'#ffc400':'#ff1a1a'),gl=wn?galeLabel(s.galesUsed):(s.status==='EXPIRED'?'EXPIRADO':'LOSS');return'<div class="sig-row" style="border-left:4px solid '+bc+'"><div><b style="color:'+co+'">'+s.entry+'</b> <span class="muted">• '+(s.time||'')+' → <b style="color:#e5e7eb">'+s.result+'</b></span></div><span style="font-size:11px;font-weight:800;color:'+bc+'">'+gl+'</span></div>';}).join('');}
-li.innerHTML=hh||'<div class="muted" style="text-align:center;padding:14px">Nenhum sinal ainda…</div>';renderJournal();}
-function renderRhythm(ai){const d=document.getElementById('deckBox'),m=document.getElementById('minuteBox'),t=document.getElementById('tieBox');if(!d||!m||!t)return;
-if(!ai.ready){d.innerHTML=m.innerHTML=t.innerHTML='<div class="muted">—</div>';return;}
-d.innerHTML='<div style="display:flex;align-items:center;gap:10px"><span class="pulse-dot '+(ai.deckChanged?'amber':'green')+'"></span><div class="miniValue" style="font-size:23px;margin:0">'+(ai.deckChanged?'TROCA DETECTADA':ai.deckRounds+' <span style="font-size:12px;color:#8b93a9">rodadas</span>')+'</div></div><div class="muted" style="margin-top:8px">'+(ai.deckChanged?'Novo baralho — recalibrando':ai.deckCount+' baralho(s) · leitura no atual')+'</div>'+((ai.deckRounds<8&&!ai.deckChanged)?'<div class="warn-line">Baralho novo: IA cautelosa</div>':'');
-let mh2='';if(ai.minTxt){const mc=ai.minSide==='HOME'?RED:BLUE;mh2+='<div style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:'+mc+'"></span><div class="miniValue" style="font-size:17px;margin:0;color:'+mc+'">'+ai.minTxt+'</div></div>';}else mh2+='<div class="miniValue" style="font-size:14px;color:#8b93a9;margin:0">Sem viés forte</div>';
-mh2+='<div style="margin-top:8px">'+(ai.minHot.length?ai.minHot.map(function(r){const rc=r.side==='HOME'?RED:BLUE;return'<div class="hot-row"><span style="color:#94a3b8">:'+String(r.min).padStart(2,'0')+'</span><span><b style="color:'+rc+'">'+r.side+'</b> <b>'+Math.round(r.p*100)+'%</b></span></div>';}).join(''):'<div class="muted">—</div>')+'</div>';m.innerHTML=mh2;
-let th='';th+=ai.tieTop.length?ai.tieTop.map(function(x){return'<div class="hot-row"><span class="muted">após '+x.k.split(',').join(' → ')+'</span><span><b style="color:#ffc400">'+Math.round(x.p*100)+'%</b></span></div>';}).join(''):'<div class="muted">Sem padrão de empate</div>';
-th+='<div class="muted" style="margin-top:8px">Empate a cada ~'+(ai.tieAvg==null?'—':ai.tieAvg)+'</div>';t.innerHTML=th;}
-function renderPlate(h){const el=document.getElementById('balls');const tt=h.length;plateData=h.map(function(x,k){return{w:x.winner,time:x.time||'',id:x.round_id,n:tt-k};});
-if(!h.length){el.innerHTML='<div class="muted">Aguardando...</div>';return;}
-el.innerHTML=h.map(function(x,k){const cl=x.winner==='HOME'?'home':x.winner==='AWAY'?'away':'tie';return'<div class="ball '+cl+(k===0?' new':'')+'" data-k="'+k+'">'+x.winner[0]+'</div>';}).join('');}
-document.addEventListener('click',function(e){const tp=document.getElementById('ballTip');const bl=e.target.closest?e.target.closest('.ball'):null;if(!bl){if(tp)tp.style.display='none';return;}
-const k=+bl.dataset.k,hh=plateData[k];if(!hh||!tp)return;const co=hh.w==='HOME'?RED:hh.w==='AWAY'?BLUE:GOLD;
-tp.innerHTML='<div style="font-weight:800;color:'+co+'">#'+hh.n+' · '+hh.w+'</div><div class="muted">'+(hh.time||'-')+'</div>';tp.style.display='block';tp.style.left=Math.min(window.innerWidth-250,e.clientX+12)+'px';tp.style.top=Math.max(8,e.clientY-10)+'px';clearTimeout(tp._t);tp._t=setTimeout(function(){tp.style.display='none';},6000);});
-function renderTable(h,tt){const tb=document.getElementById('tbody');tb.innerHTML=h.map(function(x,i){const co=x.winner==='HOME'?RED:x.winner==='AWAY'?BLUE:GOLD;return'<tr><td style="color:#64748b">#'+(tt-i)+'</td><td><span style="color:'+co+';font-weight:800">'+x.winner+'</span></td><td style="color:#94a3b8">'+(x.time||'-')+'</td><td style="color:#475569;font-size:10px">'+String(x.round_id||'').substring(0,8)+'</td></tr>';}).join('')||'<tr><td colspan=4 style="text-align:center">Sem dados</td></tr>';}
-function renderCharts(history,stats){var c1=document.getElementById('chartDist');if(c1){if(chartDist)chartDist.destroy();chartDist=new Chart(c1,{type:'doughnut',data:{labels:['HOME','AWAY','TIE'],datasets:[{data:[stats.HOME||0,stats.AWAY||0,stats.TIE||0],backgroundColor:[RED,BLUE,GOLD],borderWidth:2}]},options:{plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}}}});}var L=history.slice(0,50).reverse();var c2=document.getElementById('chartHist');if(c2&&L.length){if(chartHist)chartHist.destroy();var cc=L.map(function(h){return h.winner==='HOME'?RED:h.winner==='AWAY'?BLUE:GOLD;});chartHist=new Chart(c2,{type:'bar',data:{labels:L.map(function(_,i){return i+1;}),datasets:[{data:L.map(function(h){return h.winner==='HOME'?3:h.winner==='AWAY'?2:1;}),backgroundColor:cc,borderRadius:4}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#475569',font:{size:8}},grid:{display:false}},y:{grid:{color:'rgba(255,255,255,.04)'}}}}});}}async function loadAll(){
-if(_loading)return;_loading=true;
-try{
-const rs=await Promise.all([fetch(API_BASE+'/api/stats').then(function(r){return r.json();}),fetch(API_BASE+'/api/rounds').then(function(r){return r.json();})]);
-const stats=rs[0].stats||rs[0],history=rs[1].data||rs[1].history||[];
-history.forEach(function(h){if(h.round_id==null&&h.round!=null)h.round_id=h.round;});
-const total=history.length,newId=history.length?String(history[0].round_id):'vazio',changed=newId!==String(lastRenderedId);
-if(history.length){const rid=String(history[0].round_id);if(rid!==String(lastRoundId)){lastRoundId=history[0].round_id;lastRoundSeenAt=Date.now();}}
-const k0=(activeSignal?('A'+activeSignal.gales):'0')+'|'+sigHistory.length;
-processSignals(history);
-const ai=analyzeAI(history);
-maybeCreateSignal(ai,history);
-const k1=(activeSignal?('A'+activeSignal.gales):'0')+'|'+sigHistory.length;
-if(!changed&&k1===k0&&firstRenderDone)return;
-firstRenderDone=true;lastRenderedId=history.length?history[0].round_id:null;
-document.getElementById('status').textContent='LIVE • '+total+'/400';
-document.getElementById('total').textContent=total+'/400';
-document.getElementById('homeNum').textContent=stats.HOME||0;
-document.getElementById('homePct').textContent=pct(stats.HOME,total)+'%';
-document.getElementById('awayNum').textContent=stats.AWAY||0;
-document.getElementById('awayPct').textContent=pct(stats.AWAY,total)+'%';
-document.getElementById('tieNum').textContent=stats.TIE||0;
-document.getElementById('tiePct').textContent=pct(stats.TIE,total)+'%';
-renderPlate(history);renderTable(history,total);renderAI(ai);renderSigPanel();renderRhythm(ai);
-renderCharts(history,stats);
-const ab=document.getElementById('analysisBox');
-if(ai.ready){ab.innerHTML='<div class="analysisGrid"><div class="mini"><div class="label">Últimos 10</div><div class="miniValue" style="font-size:13px">H:'+ai.c10.HOME+' A:'+ai.c10.AWAY+' T:'+ai.c10.TIE+'</div></div><div class="mini"><div class="label">Últimos 20</div><div class="miniValue" style="font-size:13px">H:'+ai.c20.HOME+' A:'+ai.c20.AWAY+' T:'+ai.c20.TIE+'</div></div><div class="mini"><div class="label">Últimos 50</div><div class="miniValue" style="font-size:13px">H:'+ai.c50.HOME+' A:'+ai.c50.AWAY+' T:'+ai.c50.TIE+'</div></div><div class="mini"><div class="label">Chance</div><div class="miniValue" style="font-size:13px;color:'+(ai.entry?'#10b981':'#8b93a9')+'">'+(ai.entry?('BOA → '+ai.entry.pred):'observando')+'</div></div></div>';}
-else ab.innerHTML='<div class="muted">'+ai.msg+'</div>';
-const pb=document.getElementById('patternBox');
-if(ai.ready){
-const tag=function(x){const gb=(x.gale||0)>=0.60?' <b style="color:#10b981">G0/G1</b>':'';return'<span class="pattern-tag">'+x.label+' → <b>'+x.pred+'</b> <span class="muted">('+x.n+'x)</span>'+gb+'</span>';};
-const ph=(ai.pull&&ai.pull.pulls||[]).map(function(p){const co=p.side==='HOME'?RED:BLUE;return'<span class="pattern-tag" style="border-color:'+co+'66;color:'+co+'">'+p.side+' '+(p.gap>0.03?'▲ puxando':'• neutro')+'</span>';}).join('');
-let rh='<span class="muted">—</span>';
-if(ai.regime&&ai.regime.modo!=='INDEFINIDO'){const rm=ai.regime.modo,rc=rm==='ALTERNADO'?'#0f66ff':rm==='ESTICADO'?'#ff1a1a':'#8b93a9',rt=rm==='ALTERNADO'?'ZIGUE-ZAGUE':rm==='ESTICADO'?'ESTICADO':'NEUTRO';rh='<span class="pattern-tag" style="border-color:'+rc+';color:'+rc+'">Ritmo: '+rt+'</span> <span class="muted">'+Math.round(ai.regime.alt*100)+'%</span>';}
-pb.innerHTML='<div class="label" style="margin-bottom:8px">Ritmo</div><div style="margin-bottom:10px">'+rh+'</div><div class="label" style="margin-bottom:8px">Puxando</div><div style="margin-bottom:10px">'+(ph||'—')+'</div><div class="label" style="margin-bottom:8px">Análises</div><div>'+(ai.cands.length?ai.cands.map(tag).join(''):'—')+'</div>';
-}else pb.innerHTML='<div class="muted">Analisando...</div>';
-}catch(e){document.getElementById('status').textContent='Erro: '+e.message;}
-finally{_loading=false;}}
-let minimizado=false;
-function minimizar(){minimizado=true;document.querySelector('.container').style.display='none';document.getElementById('miniWidget').style.display='block';updateMini();}
-function restaurar(){minimizado=false;document.querySelector('.container').style.display='';document.getElementById('miniWidget').style.display='none';}
-function updateMini(){const w=document.getElementById('miniWidget'),t=document.getElementById('miniTxt');if(!w||!t)return;
-if(activeSignal){const ih=activeSignal.entry==='HOME';t.textContent=activeSignal.entry;t.style.fontSize='28px';w.style.background=ih?'linear-gradient(135deg,#ff1a1a,#a3000d)':'linear-gradient(135deg,#0f66ff,#083a99)';w.style.border='2px solid '+(ih?'#ff7a7a':'#8db9ff');}
-else{t.textContent='Analisando...';t.style.fontSize='15px';w.style.background='rgba(10,15,29,.96)';w.style.border='1px solid rgba(139,92,246,.4)';}}
-const LS_USERS='vander_users_v1',LS_SESSION='vander_session_v1';
-const ADMIN_USER='santarosavander@gmail.com',ADMIN_PASS='131619jV*';
-function loadUsers(){try{const u=JSON.parse(localStorage.getItem(LS_USERS)||'null');if(Array.isArray(u)&&u.length)return u;}catch(e){}const sd=[{user:ADMIN_USER,pass:ADMIN_PASS,name:'Admin',created:Date.now()}];try{localStorage.setItem(LS_USERS,JSON.stringify(sd));}catch(e){}return sd;}
-function doLogin(){const u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value,er=document.getElementById('loginError');
-const f=loadUsers().find(function(x){return x.user===u&&x.pass===p;});
-if(f){er.style.display='none';try{localStorage.setItem(LS_SESSION,JSON.stringify({user:f.user,at:Date.now()}));}catch(e){}document.getElementById('loginScreen').style.display='none';startApp();}
-else{er.textContent='Usuário ou senha incorretos';er.style.display='block';}}
-function doLogout(){try{localStorage.removeItem(LS_SESSION);}catch(e){}location.reload();}
-let _started=false;
-function startApp(){if(_started)return;_started=true;loadAll();connectStream();setInterval(loadAll,2000);}
-(function(){try{const s=JSON.parse(localStorage.getItem(LS_SESSION)||'null');if(s&&s.user){document.getElementById('loginScreen').style.display='none';startApp();}}catch(e){}})();
-
-/* ===== SINAIS DO ROBÔ 24/7 ===== */
-async function syncRobotSignals(){
-  try{
-    const r = await fetch('/api/signals');
-    if(!r.ok) return;
-    const j = await r.json();
-    const arr = (j.signals||[]).concat(j.active?[Object.assign({},j.active,{status:'ATIVO'})]:[]);
-    let changed = false;
-    for(const s of arr){
-      const key = s.entry+':'+s.afterRoundId;
-      const inHist = sigHistory.some(function(x){return (x.entry+':'+x.afterRoundId)===key;});
-      const isActive = activeSignal && (activeSignal.entry+':'+activeSignal.afterRoundId)===key;
-      if(!inHist && !isActive){ sigHistory.unshift(s); changed = true; }
-    }
-    if(changed){
-      sigHistory.sort(function(a,b){return (b.endedAt||b.id)-(a.endedAt||a.id);});
-      sigHistory = sigHistory.slice(0,12);
-      try{ persistIA(); }catch(e){}
-      try{ renderSigPanel(); }catch(e){}
-    }
-  }catch(e){}
-}
-setInterval(syncRobotSignals, 30000);
-setTimeout(syncRobotSignals, 5000);
-</script></body></html>
+function detectarRegime(s){const sl=s.slice(0,20).filter(function(x){return x==='HOME'||x=
