@@ -1,0 +1,10 @@
+{
+  "name": "vander-ia-24h",
+  "version": "1.0.0",
+  "description": "Vander IA 24/7 - robo que coleta e analisa sozinho no Render",
+  "type": "module",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": { "express": "^4.18.2" },
+  "engines": { "node": ">=18.0.0" }
+}
